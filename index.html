@@ -4,174 +4,483 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Network VLAN Audit Tool</title>
-    <!-- 1. Include the SheetJS library from a CDN -->
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
-      integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
+    <!-- Include the SheetJS library from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-    <!-- 2. Add CSS for styling -->
+    <!-- Dark Theme CSS -->
     <style>
       :root {
-        --primary-color: #007bff;
-        --secondary-color: #6c757d;
-        --success-color: #28a745;
-        --danger-color: #dc3545;
-        --light-gray: #f8f9fa;
-        --dark-gray: #343a40;
-        --border-color: #dee2e6;
+        --bg-primary: #0d1117;
+        --bg-secondary: #161b22;
+        --bg-tertiary: #21262d;
+        --bg-card: #1c2128;
+        --border-primary: #30363d;
+        --border-secondary: #21262d;
+        --text-primary: #f0f6fc;
+        --text-secondary: #8b949e;
+        --text-muted: #6e7681;
+        --accent-blue: #58a6ff;
+        --accent-green: #3fb950;
+        --accent-orange: #d29922;
+        --accent-red: #f85149;
+        --accent-purple: #a5a5ff;
+        --shadow: rgba(0, 0, 0, 0.3);
+        --gradient: linear-gradient(135deg, #58a6ff 0%, #3fb950 100%);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
       }
 
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        background-color: var(--light-gray);
-        color: var(--dark-gray);
-        margin: 0;
-        padding: 20px;
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
+          Helvetica, Arial, sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        line-height: 1.6;
         min-height: 100vh;
+        padding: 20px;
+        background-image: radial-gradient(
+            circle at 25% 25%,
+            rgba(88, 166, 255, 0.1) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 75% 75%,
+            rgba(63, 185, 80, 0.1) 0%,
+            transparent 50%
+          );
       }
 
       .container {
-        width: 100%;
-        max-width: 800px;
-        background: #fff;
-        padding: 30px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        max-width: 900px;
+        margin: 0 auto;
+        background: var(--bg-card);
+        border-radius: 16px;
+        border: 1px solid var(--border-primary);
+        box-shadow: 0 8px 32px var(--shadow);
+        overflow: hidden;
+        backdrop-filter: blur(10px);
       }
 
-      h1 {
+      .header {
+        background: var(--gradient);
+        padding: 30px;
         text-align: center;
-        color: var(--dark-gray);
-        margin-bottom: 25px;
-        border-bottom: 2px solid var(--primary-color);
-        padding-bottom: 10px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .header::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          45deg,
+          rgba(255, 255, 255, 0.1) 0%,
+          transparent 100%
+        );
+        pointer-events: none;
+      }
+
+      .header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: white;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        margin-bottom: 8px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .header p {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.1rem;
+        position: relative;
+        z-index: 1;
+      }
+
+      .content {
+        padding: 30px;
       }
 
       .upload-section {
+        background: var(--bg-secondary);
+        border: 2px dashed var(--border-primary);
+        border-radius: 12px;
+        padding: 40px;
         text-align: center;
-        border: 2px dashed var(--border-color);
-        padding: 30px;
-        border-radius: 8px;
+        margin-bottom: 25px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .upload-section:hover {
+        border-color: var(--accent-blue);
+        background: var(--bg-tertiary);
+        transform: translateY(-2px);
+      }
+
+      .upload-section::before {
+        content: "📁";
+        font-size: 3rem;
+        display: block;
+        margin-bottom: 15px;
+        opacity: 0.7;
+      }
+
+      .upload-label {
+        font-size: 1.2rem;
+        color: var(--text-primary);
+        margin-bottom: 10px;
+        font-weight: 600;
+      }
+
+      .upload-hint {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
         margin-bottom: 20px;
       }
 
       #fileInput {
         width: 100%;
-        padding: 10px;
+        padding: 12px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-primary);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-size: 1rem;
+        transition: all 0.3s ease;
+      }
+
+      #fileInput:focus {
+        outline: none;
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
       }
 
       .output-options {
-        margin-bottom: 20px;
-        padding: 15px;
-        border: 1px solid var(--border-color);
-        border-radius: 5px;
-        background-color: #fdfdff;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-primary);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+        transition: all 0.3s ease;
       }
 
       .output-options legend {
-        font-weight: bold;
-        padding: 0 10px;
-        margin-left: 10px;
+        font-weight: 600;
+        color: var(--accent-blue);
+        padding: 0 15px;
+        font-size: 1.1rem;
+      }
+
+      .radio-group {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 15px;
+      }
+
+      .radio-option {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+      }
+
+      .radio-option:hover {
+        background: var(--bg-tertiary);
+      }
+
+      .radio-option input[type="radio"] {
+        margin-right: 12px;
+        accent-color: var(--accent-blue);
+        transform: scale(1.2);
+      }
+
+      .radio-option label {
+        cursor: pointer;
+        color: var(--text-primary);
+        font-weight: 500;
       }
 
       #processButton {
-        display: block;
         width: 100%;
-        padding: 15px;
-        font-size: 18px;
-        font-weight: bold;
-        color: #fff;
-        background-color: var(--success-color);
+        padding: 16px 24px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: white;
+        background: var(--gradient);
         border: none;
-        border-radius: 5px;
+        border-radius: 12px;
         cursor: pointer;
-        transition: background-color 0.3s ease;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      #processButton::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.2),
+          transparent
+        );
+        transition: left 0.5s;
+      }
+
+      #processButton:hover::before {
+        left: 100%;
       }
 
       #processButton:hover {
-        background-color: #218838;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(88, 166, 255, 0.3);
       }
 
       #processButton:disabled {
-        background-color: var(--secondary-color);
+        background: var(--bg-tertiary);
+        color: var(--text-muted);
         cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      #processButton:disabled::before {
+        display: none;
       }
 
       .log-container {
-        margin-top: 25px;
+        margin-top: 30px;
       }
 
-      .log-container h2 {
-        font-size: 1.2em;
-        color: var(--dark-gray);
-        border-bottom: 1px solid var(--border-color);
-        padding-bottom: 5px;
+      .log-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border-primary);
+      }
+
+      .log-header h2 {
+        font-size: 1.3rem;
+        color: var(--text-primary);
+        margin-right: 10px;
+      }
+
+      .log-status {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .log-status.ready {
+        background: rgba(63, 185, 80, 0.2);
+        color: var(--accent-green);
+      }
+
+      .log-status.processing {
+        background: rgba(210, 153, 34, 0.2);
+        color: var(--accent-orange);
+        animation: pulse 2s infinite;
+      }
+
+      .log-status.complete {
+        background: rgba(88, 166, 255, 0.2);
+        color: var(--accent-blue);
+      }
+
+      .log-status.error {
+        background: rgba(248, 81, 73, 0.2);
+        color: var(--accent-red);
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
       }
 
       #logOutput {
-        background-color: #e9ecef;
-        border: 1px solid var(--border-color);
-        border-radius: 5px;
-        padding: 15px;
-        min-height: 100px;
-        max-height: 300px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-primary);
+        border-radius: 8px;
+        padding: 20px;
+        min-height: 120px;
+        max-height: 350px;
         overflow-y: auto;
+        font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono",
+          Consolas, "Courier New", monospace;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        color: var(--text-secondary);
         white-space: pre-wrap;
         word-wrap: break-word;
-        font-family: "Courier New", Courier, monospace;
-        font-size: 14px;
-        color: #495057;
+      }
+
+      #logOutput::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      #logOutput::-webkit-scrollbar-track {
+        background: var(--bg-secondary);
+        border-radius: 4px;
+      }
+
+      #logOutput::-webkit-scrollbar-thumb {
+        background: var(--border-primary);
+        border-radius: 4px;
+      }
+
+      #logOutput::-webkit-scrollbar-thumb:hover {
+        background: var(--text-muted);
+      }
+
+      .fade-in {
+        animation: fadeIn 0.5s ease-in;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Responsive Design */
+      @media (max-width: 768px) {
+        body {
+          padding: 10px;
+        }
+
+        .header h1 {
+          font-size: 2rem;
+        }
+
+        .content {
+          padding: 20px;
+        }
+
+        .upload-section {
+          padding: 30px 20px;
+        }
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <h1>Network VLAN Audit Tool</h1>
-
-      <div class="upload-section">
-        <input type="file" id="fileInput" multiple accept=".txt,.log,.conf" />
+      <div class="header">
+        <h1>Network VLAN Audit Tool</h1>
+        <p>Professional network configuration analysis made simple</p>
       </div>
 
-      <fieldset class="output-options" id="outputOptions" style="display: none">
-        <legend>Output Format</legend>
-        <div>
-          <input type="radio" id="singleFile" name="outputFormat" value="single" checked />
-          <label for="singleFile">Single Excel file with multiple sheets</label>
+      <div class="content">
+        <div class="upload-section">
+          <div class="upload-label">Select Configuration Files</div>
+          <div class="upload-hint">
+            Choose one or more Juniper configuration files (.txt, .log, .conf)
+          </div>
+          <input type="file" id="fileInput" multiple accept=".txt,.log,.conf" />
         </div>
-        <div>
-          <input type="radio" id="multipleFiles" name="outputFormat" value="multiple" />
-          <label for="multipleFiles">Separate Excel file for each switch</label>
+
+        <fieldset class="output-options fade-in" id="outputOptions" style="display: none">
+          <legend>📊 Output Format</legend>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input
+                type="radio"
+                id="singleFile"
+                name="outputFormat"
+                value="single"
+                checked
+              />
+              <label for="singleFile">
+                Single Excel file with multiple sheets (Recommended)
+              </label>
+            </div>
+            <div class="radio-option">
+              <input
+                type="radio"
+                id="multipleFiles"
+                name="outputFormat"
+                value="multiple"
+              />
+              <label for="multipleFiles">
+                Separate Excel file for each switch
+              </label>
+            </div>
+          </div>
+        </fieldset>
+
+        <button id="processButton">
+          🚀 Process Files & Download Excel
+        </button>
+
+        <div class="log-container">
+          <div class="log-header">
+            <h2>📋 Processing Log</h2>
+            <span class="log-status ready" id="logStatus">Ready</span>
+          </div>
+          <pre id="logOutput">🎯 Select configuration files and click the process button to begin analysis.</pre>
         </div>
-      </fieldset>
-
-      <button id="processButton">Process Files & Download Excel</button>
-
-      <div class="log-container">
-        <h2>Processing Log</h2>
-        <pre id="logOutput">Select one or more configuration files and click the process button.</pre>
       </div>
     </div>
 
-    <!-- 3. Add the JavaScript logic -->
+    <!-- JavaScript Logic -->
     <script>
       // DOM Element References
       const fileInput = document.getElementById("fileInput");
       const processButton = document.getElementById("processButton");
       const logOutput = document.getElementById("logOutput");
       const outputOptions = document.getElementById("outputOptions");
+      const logStatus = document.getElementById("logStatus");
 
       // Attach event listeners
       processButton.addEventListener("click", handleFileProcessing);
       fileInput.addEventListener("change", () => {
-        // Show output options only if files are selected
-        outputOptions.style.display = fileInput.files.length > 1 ? "block" : "none";
+        outputOptions.style.display =
+          fileInput.files.length > 1 ? "block" : "none";
+        if (fileInput.files.length > 0) {
+          updateLogStatus("ready", "Ready");
+          log(`📁 Selected ${fileInput.files.length} file(s) for processing.`);
+        }
       });
+
+      /**
+       * Updates the log status indicator
+       */
+      function updateLogStatus(type, text) {
+        logStatus.className = `log-status ${type}`;
+        logStatus.textContent = text;
+      }
 
       /**
        * Main handler function that orchestrates the file processing.
@@ -179,22 +488,41 @@
       async function handleFileProcessing() {
         const files = fileInput.files;
         if (files.length === 0) {
-          log("ERROR: Please select at least one configuration file.");
+          log("❌ ERROR: Please select at least one configuration file.");
+          updateLogStatus("error", "Error");
           return;
         }
 
         processButton.disabled = true;
-        processButton.textContent = "Processing...";
+        processButton.textContent = "⏳ Processing...";
+        updateLogStatus("processing", "Processing");
         clearLog();
 
         const allProcessedData = [];
+        const hostnameCounter = new Map(); // Track duplicate hostnames
 
         try {
-          for (const file of files) {
-            log(`--- Processing file: ${file.name} ---`);
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            log(`\n🔍 Processing file ${i + 1}/${files.length}: ${file.name}`);
+            
             const fileContent = await readFileAsText(file);
-            const { hostname, vlanDetails } = parseJuniperConfig(fileContent, file.name);
-            log(`Found Hostname: ${hostname}`);
+            const { hostname, vlanDetails } = parseJuniperConfig(
+              fileContent,
+              file.name
+            );
+
+            // Handle duplicate hostnames
+            let uniqueHostname = hostname;
+            if (hostnameCounter.has(hostname)) {
+              const count = hostnameCounter.get(hostname) + 1;
+              hostnameCounter.set(hostname, count);
+              uniqueHostname = `${hostname}_${count}`;
+            } else {
+              hostnameCounter.set(hostname, 1);
+            }
+
+            log(`📡 Found Hostname: ${hostname}${uniqueHostname !== hostname ? ` (Sheet: ${uniqueHostname})` : ''}`);
 
             const switchRecords = [];
             const vlanNames = Object.keys(vlanDetails).sort();
@@ -219,26 +547,30 @@
             if (switchRecords.length > 0) {
               allProcessedData.push({
                 hostname: hostname,
+                uniqueHostname: uniqueHostname, // For sheet naming
                 records: switchRecords,
               });
-              log(`Extracted ${switchRecords.length} interface assignments.`);
+              log(`✅ Extracted ${switchRecords.length} interface assignments from ${vlanNames.length} VLANs.`);
             } else {
-              log(`No VLAN interface assignments found in this file.`);
+              log(`⚠️  No VLAN interface assignments found in this file.`);
             }
           }
 
           if (allProcessedData.length > 0) {
-            log("\n--- Generating Excel Report(s) ---");
+            log("\n📊 Generating Excel Report(s)...");
             generateOutput(allProcessedData);
+            updateLogStatus("complete", "Complete");
           } else {
-            log("\nWARNING: No data was extracted from any of the files.");
+            log("\n⚠️  WARNING: No data was extracted from any of the files.");
+            updateLogStatus("error", "No Data");
           }
         } catch (error) {
-          log(`\nFATAL ERROR: ${error.message}`);
+          log(`\n💥 FATAL ERROR: ${error.message}`);
+          updateLogStatus("error", "Error");
           console.error(error);
         } finally {
           processButton.disabled = false;
-          processButton.textContent = "Process Files & Download Excel";
+          processButton.textContent = "🚀 Process Files & Download Excel";
         }
       }
 
@@ -246,43 +578,47 @@
        * Determines which Excel generation function to call based on user choice.
        */
       function generateOutput(processedData) {
-        const format = document.querySelector('input[name="outputFormat"]:checked').value;
+        const format = document.querySelector(
+          'input[name="outputFormat"]:checked'
+        ).value;
 
         if (format === "single" || processedData.length === 1) {
           generateSingleFile(processedData);
-          log("SUCCESS: Combined Excel report download initiated.");
+          log("🎉 SUCCESS: Combined Excel report download initiated.");
         } else {
           generateMultipleFiles(processedData);
-          log("SUCCESS: Separate Excel file downloads initiated.");
+          log("🎉 SUCCESS: Separate Excel file downloads initiated.");
         }
       }
 
       /**
        * Parses Juniper 'display set' config text to extract VLAN data.
-       * @param {string} configText - The full text of the configuration file.
-       * @param {string} fallbackHostname - A default hostname from the filename.
-       * @returns {{hostname: string, vlanDetails: object}}
        */
       function parseJuniperConfig(configText, fallbackHostname) {
         const lines = configText.split("\n");
-        let hostname = fallbackHostname.replace(/\.(txt|log|conf)$/i, "") || "unknown-switch";
+        let hostname =
+          fallbackHostname.replace(/\.(txt|log|conf)$/i, "") ||
+          "unknown-switch";
         const vlanDetails = {};
         const trunkPortsAllVlans = [];
 
         const hostPattern = /set system host-name\s+(\S+)/;
         const vlanIdPattern = /set vlans\s+(\S+)\s+vlan-id\s+(\d+)/;
-        const accessPortPattern = /set interfaces\s+(\S+)\s+unit\s+\d+\s+family\s+ethernet-switching\s+vlan\s+members\s+(\S+)/;
+        const accessPortPattern =
+          /set interfaces\s+(\S+)\s+unit\s+\d+\s+family\s+ethernet-switching\s+vlan\s+members\s+(\S+)/;
 
         for (const line of lines) {
           const vlanIdMatch = line.match(vlanIdPattern);
           if (vlanIdMatch) {
             let vlanName = vlanIdMatch[1];
             const vlanId = parseInt(vlanIdMatch[2], 10);
+            
             // Clean up VLAN name by removing "-<vlan_id>" suffix
             const nameSuffix = `-${vlanId}`;
             if (vlanName.endsWith(nameSuffix)) {
               vlanName = vlanName.slice(0, -nameSuffix.length);
             }
+            
             if (!vlanDetails[vlanName]) {
               vlanDetails[vlanName] = { id: vlanId, interfaces: [] };
             }
@@ -311,7 +647,7 @@
                   if (!details.interfaces.includes(interfaceName)) {
                     details.interfaces.push(interfaceName);
                   }
-                  break; // Found the correct VLAN, stop searching
+                  break;
                 }
               }
             }
@@ -343,7 +679,10 @@
 
         processedData.forEach((data) => {
           const wsSwitch = XLSX.utils.json_to_sheet(data.records);
-          const safeSheetName = data.hostname.replace(/[\[\]\*:\?/\\ ]/g, "_").substring(0, 31);
+          // Use the unique hostname for sheet naming
+          const safeSheetName = data.uniqueHostname
+            .replace(/[\[\]\*:\?/\\ ]/g, "_")
+            .substring(0, 31);
           XLSX.utils.book_append_sheet(wb, wsSwitch, safeSheetName);
         });
 
@@ -358,7 +697,7 @@
           const wb = XLSX.utils.book_new();
           const ws = XLSX.utils.json_to_sheet(data.records);
           XLSX.utils.book_append_sheet(wb, ws, "VLAN_Data");
-          XLSX.writeFile(wb, `${data.hostname}_Report.xlsx`);
+          XLSX.writeFile(wb, `${data.hostname}_VLAN_Report.xlsx`);
         });
       }
 
@@ -371,9 +710,11 @@
           reader.readAsText(file);
         });
       }
+
       function clearLog() {
         logOutput.textContent = "";
       }
+
       function log(message) {
         logOutput.textContent += message + "\n";
         logOutput.scrollTop = logOutput.scrollHeight;
