@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Network VLAN Audit Tool</title>
+    <!-- 1. Include the SheetJS library from a CDN -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
+      integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+
+    <!-- 2. Add CSS for styling -->
+    <style>
+      :root {
+        --primary-color: #007bff;
+        --secondary-color: #6c757d;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --light-gray: #f8f9fa;
+        --dark-gray: #343a40;
+        --border-color: #dee2e6;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--light-gray);
+        color: var(--dark-gray);
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: 100vh;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 800px;
+        background: #fff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        text-align: center;
+        color: var(--dark-gray);
+        margin-bottom: 25px;
+        border-bottom: 2px solid var(--primary-color);
+        padding-bottom: 10px;
+      }
+
+      .upload-section {
+        text-align: center;
+        border: 2px dashed var(--border-color);
+        padding: 30px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+
+      #fileInput {
+        width: 100%;
+        padding: 10px;
+      }
+
+      .output-options {
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+        background-color: #fdfdff;
+      }
+
+      .output-options legend {
+        font-weight: bold;
+        padding: 0 10px;
+        margin-left: 10px;
+      }
+
+      #processButton {
+        display: block;
+        width: 100%;
+        padding: 15px;
+        font-size: 18px;
+        font-weight: bold;
+        color: #fff;
+        background-color: var(--success-color);
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+
+      #processButton:hover {
+        background-color: #218838;
+      }
+
+      #processButton:disabled {
+        background-color: var(--secondary-color);
+        cursor: not-allowed;
+      }
+
+      .log-container {
+        margin-top: 25px;
+      }
+
+      .log-container h2 {
+        font-size: 1.2em;
+        color: var(--dark-gray);
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 5px;
+      }
+
+      #logOutput {
+        background-color: #e9ecef;
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+        padding: 15px;
+        min-height: 100px;
+        max-height: 300px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-family: "Courier New", Courier, monospace;
+        font-size: 14px;
+        color: #495057;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Network VLAN Audit Tool</h1>
+
+      <div class="upload-section">
+        <input type="file" id="fileInput" multiple accept=".txt,.log,.conf" />
+      </div>
+
+      <fieldset class="output-options" id="outputOptions" style="display: none">
+        <legend>Output Format</legend>
+        <div>
+          <input type="radio" id="singleFile" name="outputFormat" value="single" checked />
+          <label for="singleFile">Single Excel file with multiple sheets</label>
+        </div>
+        <div>
+          <input type="radio" id="multipleFiles" name="outputFormat" value="multiple" />
+          <label for="multipleFiles">Separate Excel file for each switch</label>
+        </div>
+      </fieldset>
+
+      <button id="processButton">Process Files & Download Excel</button>
+
+      <div class="log-container">
+        <h2>Processing Log</h2>
+        <pre id="logOutput">Select one or more configuration files and click the process button.</pre>
+      </div>
+    </div>
+
+    <!-- 3. Add the JavaScript logic -->
+    <script>
+      // DOM Element References
+      const fileInput = document.getElementById("fileInput");
+      const processButton = document.getElementById("processButton");
+      const logOutput = document.getElementById("logOutput");
+      const outputOptions = document.getElementById("outputOptions");
+
+      // Attach event listeners
+      processButton.addEventListener("click", handleFileProcessing);
+      fileInput.addEventListener("change", () => {
+        // Show output options only if files are selected
+        outputOptions.style.display = fileInput.files.length > 1 ? "block" : "none";
+      });
+
+      /**
+       * Main handler function that orchestrates the file processing.
+       */
+      async function handleFileProcessing() {
+        const files = fileInput.files;
+        if (files.length === 0) {
+          log("ERROR: Please select at least one configuration file.");
+          return;
+        }
+
+        processButton.disabled = true;
+        processButton.textContent = "Processing...";
+        clearLog();
+
+        const allProcessedData = [];
+
+        try {
+          for (const file of files) {
+            log(`--- Processing file: ${file.name} ---`);
+            const fileContent = await readFileAsText(file);
+            const { hostname, vlanDetails } = parseJuniperConfig(fileContent, file.name);
+            log(`Found Hostname: ${hostname}`);
+
+            const switchRecords = [];
+            const vlanNames = Object.keys(vlanDetails).sort();
+
+            for (const vlanName of vlanNames) {
+              const details = vlanDetails[vlanName];
+              const vlanId = details.id;
+              const interfaces = details.interfaces.sort();
+
+              if (interfaces.length > 0) {
+                for (const interfaceName of interfaces) {
+                  switchRecords.push({
+                    "Switch Name": hostname,
+                    "VLAN Name": vlanName,
+                    "VLAN ID": vlanId,
+                    Interface: interfaceName,
+                  });
+                }
+              }
+            }
+
+            if (switchRecords.length > 0) {
+              allProcessedData.push({
+                hostname: hostname,
+                records: switchRecords,
+              });
+              log(`Extracted ${switchRecords.length} interface assignments.`);
+            } else {
+              log(`No VLAN interface assignments found in this file.`);
+            }
+          }
+
+          if (allProcessedData.length > 0) {
+            log("\n--- Generating Excel Report(s) ---");
+            generateOutput(allProcessedData);
+          } else {
+            log("\nWARNING: No data was extracted from any of the files.");
+          }
+        } catch (error) {
+          log(`\nFATAL ERROR: ${error.message}`);
+          console.error(error);
+        } finally {
+          processButton.disabled = false;
+          processButton.textContent = "Process Files & Download Excel";
+        }
+      }
+
+      /**
+       * Determines which Excel generation function to call based on user choice.
+       */
+      function generateOutput(processedData) {
+        const format = document.querySelector('input[name="outputFormat"]:checked').value;
+
+        if (format === "single" || processedData.length === 1) {
+          generateSingleFile(processedData);
+          log("SUCCESS: Combined Excel report download initiated.");
+        } else {
+          generateMultipleFiles(processedData);
+          log("SUCCESS: Separate Excel file downloads initiated.");
+        }
+      }
+
+      /**
+       * Parses Juniper 'display set' config text to extract VLAN data.
+       * @param {string} configText - The full text of the configuration file.
+       * @param {string} fallbackHostname - A default hostname from the filename.
+       * @returns {{hostname: string, vlanDetails: object}}
+       */
+      function parseJuniperConfig(configText, fallbackHostname) {
+        const lines = configText.split("\n");
+        let hostname = fallbackHostname.replace(/\.(txt|log|conf)$/i, "") || "unknown-switch";
+        const vlanDetails = {};
+        const trunkPortsAllVlans = [];
+
+        const hostPattern = /set system host-name\s+(\S+)/;
+        const vlanIdPattern = /set vlans\s+(\S+)\s+vlan-id\s+(\d+)/;
+        const accessPortPattern = /set interfaces\s+(\S+)\s+unit\s+\d+\s+family\s+ethernet-switching\s+vlan\s+members\s+(\S+)/;
+
+        for (const line of lines) {
+          const vlanIdMatch = line.match(vlanIdPattern);
+          if (vlanIdMatch) {
+            let vlanName = vlanIdMatch[1];
+            const vlanId = parseInt(vlanIdMatch[2], 10);
+            // Clean up VLAN name by removing "-<vlan_id>" suffix
+            const nameSuffix = `-${vlanId}`;
+            if (vlanName.endsWith(nameSuffix)) {
+              vlanName = vlanName.slice(0, -nameSuffix.length);
+            }
+            if (!vlanDetails[vlanName]) {
+              vlanDetails[vlanName] = { id: vlanId, interfaces: [] };
+            }
+            continue;
+          }
+
+          const hostMatch = line.match(hostPattern);
+          if (hostMatch) {
+            hostname = hostMatch[1].replace(/["';]/g, "");
+            continue;
+          }
+
+          const accessMatch = line.match(accessPortPattern);
+          if (accessMatch) {
+            const interfaceName = accessMatch[1];
+            let vlanMember = accessMatch[2].replace(/["';]/g, "");
+
+            if (vlanMember === "all") {
+              trunkPortsAllVlans.push(interfaceName);
+            } else {
+              // Find the cleaned-up VLAN name to add the interface to
+              for (const cleanName in vlanDetails) {
+                const details = vlanDetails[cleanName];
+                const originalName = `${cleanName}-${details.id}`;
+                if (vlanMember === originalName || vlanMember === cleanName) {
+                  if (!details.interfaces.includes(interfaceName)) {
+                    details.interfaces.push(interfaceName);
+                  }
+                  break; // Found the correct VLAN, stop searching
+                }
+              }
+            }
+          }
+        }
+
+        if (trunkPortsAllVlans.length > 0) {
+          for (const vlanName in vlanDetails) {
+            for (const trunkPort of trunkPortsAllVlans) {
+              if (!vlanDetails[vlanName].interfaces.includes(trunkPort)) {
+                vlanDetails[vlanName].interfaces.push(trunkPort);
+              }
+            }
+          }
+        }
+
+        return { hostname, vlanDetails };
+      }
+
+      /**
+       * Generates a single .xlsx file with multiple sheets.
+       */
+      function generateSingleFile(processedData) {
+        const wb = XLSX.utils.book_new();
+        const allRecords = processedData.flatMap((data) => data.records);
+
+        const wsMaster = XLSX.utils.json_to_sheet(allRecords);
+        XLSX.utils.book_append_sheet(wb, wsMaster, "All_Switches_Combined");
+
+        processedData.forEach((data) => {
+          const wsSwitch = XLSX.utils.json_to_sheet(data.records);
+          const safeSheetName = data.hostname.replace(/[\[\]\*:\?/\\ ]/g, "_").substring(0, 31);
+          XLSX.utils.book_append_sheet(wb, wsSwitch, safeSheetName);
+        });
+
+        XLSX.writeFile(wb, "VLAN_Audit_Report_Combined.xlsx");
+      }
+
+      /**
+       * Generates and downloads a separate .xlsx file for each switch.
+       */
+      function generateMultipleFiles(processedData) {
+        processedData.forEach((data) => {
+          const wb = XLSX.utils.book_new();
+          const ws = XLSX.utils.json_to_sheet(data.records);
+          XLSX.utils.book_append_sheet(wb, ws, "VLAN_Data");
+          XLSX.writeFile(wb, `${data.hostname}_Report.xlsx`);
+        });
+      }
+
+      // --- Utility Functions ---
+      function readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsText(file);
+        });
+      }
+      function clearLog() {
+        logOutput.textContent = "";
+      }
+      function log(message) {
+        logOutput.textContent += message + "\n";
+        logOutput.scrollTop = logOutput.scrollHeight;
+      }
+    </script>
+  </body>
+</html>
